@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rainy Notes 🌧</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&family=Noto+Sans+Thai:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2333;
+    --surface3: #21262d;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #7d8590;
+    --text-dim: #484f58;
+    --accent: #58a6ff;
+    --accent2: #bc8cff;
+    --accent3: #79c0ff;
+    --green: #3fb950;
+    --red: #f85149;
+    --yellow: #d29922;
+    --orange: #db6d28;
+    --rain1: rgba(88,166,255,0.15);
+    --rain2: rgba(188,140,255,0.1);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'Noto Sans Thai', 'DM Mono', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Rain effect */
+  .rain-bg {
+    position: fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden;
+  }
+  .raindrop {
+    position:absolute; top:-20px; width:1px; background: linear-gradient(to bottom, transparent, rgba(88,166,255,0.3));
+    animation: fall linear infinite;
+  }
+  @keyframes fall {
+    to { transform: translateY(110vh); }
+  }
+
+  /* Layout */
+  .app { display:flex; height:100vh; position:relative; z-index:1; }
+
+  /* Sidebar */
+  .sidebar {
+    width: 260px; min-width:260px; background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    transition: width .3s; overflow:hidden;
+  }
+  .sidebar.collapsed { width: 0; min-width:0; }
+
+  .sidebar-header {
+    padding: 20px 16px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px; color: var(--accent);
+    display:flex; align-items:center; gap:8px;
+  }
+  .logo-icon { font-size:22px; }
+
+  .sidebar-section { padding: 12px 8px 4px; }
+  .section-label {
+    font-size:10px; letter-spacing:.1em; text-transform:uppercase;
+    color: var(--text-dim); padding: 0 8px 6px;
+  }
+
+  .nav-item {
+    display:flex; align-items:center; gap:10px;
+    padding: 7px 10px; border-radius:6px; cursor:pointer;
+    font-size:13px; color: var(--text-muted);
+    transition: all .15s; user-select:none;
+  }
+  .nav-item:hover { background: var(--surface3); color: var(--text); }
+  .nav-item.active { background: rgba(88,166,255,.12); color: var(--accent); }
+  .nav-item .icon { font-size:14px; width:16px; text-align:center; }
+  .nav-item .count {
+    margin-left:auto; font-size:11px; background: var(--surface3);
+    padding:1px 6px; border-radius:10px; color: var(--text-dim);
+  }
+
+  /* Folders */
+  .folder-item {
+    display:flex; align-items:center; gap:8px;
+    padding: 6px 10px; border-radius:6px; cursor:pointer;
+    font-size:13px; color: var(--text-muted);
+    transition: all .15s; user-select:none; position:relative;
+  }
+  .folder-item:hover { background: var(--surface3); color: var(--text); }
+  .folder-item.active { color: var(--accent2); background: rgba(188,140,255,.1); }
+  .folder-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .folder-name { flex:1; truncate; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+  .folder-actions { display:none; gap:4px; }
+  .folder-item:hover .folder-actions { display:flex; }
+  .folder-actions button {
+    background:none; border:none; color: var(--text-muted); cursor:pointer;
+    padding:2px 4px; border-radius:3px; font-size:11px;
+    transition:.1s;
+  }
+  .folder-actions button:hover { color: var(--red); background: rgba(248,81,73,.1); }
+
+  /* Tags */
+  .tag-chip {
+    display:inline-flex; align-items:center; gap:5px;
+    padding: 4px 10px; border-radius:12px; font-size:12px;
+    cursor:pointer; transition:.15s; margin:2px;
+    border: 1px solid transparent;
+  }
+  .tag-chip:hover { opacity:.85; }
+  .tag-chip.active { border-color: currentColor; }
+  .tag-chip .tag-x {
+    display:none; font-size:10px; margin-left:2px; opacity:.7;
+  }
+  .tag-chip:hover .tag-x { display:inline; }
+
+  .sidebar-tags { padding: 4px 8px 8px; display:flex; flex-wrap:wrap; }
+
+  /* Add buttons */
+  .add-btn {
+    display:flex; align-items:center; gap:6px;
+    padding: 6px 10px; border-radius:6px; cursor:pointer;
+    font-size:12px; color: var(--text-dim);
+    transition:.15s; border:none; background:none; width:100%; text-align:left;
+  }
+  .add-btn:hover { color: var(--accent); background: rgba(88,166,255,.08); }
+
+  .sidebar-bottom { margin-top:auto; padding:12px 8px; border-top:1px solid var(--border); }
+
+  /* Main */
+  .main { flex:1; display:flex; flex-direction:column; min-width:0; }
+
+  /* Toolbar */
+  .toolbar {
+    padding: 12px 20px; border-bottom: 1px solid var(--border);
+    display:flex; align-items:center; gap:12px; background: var(--surface);
+    flex-shrink:0;
+  }
+  .toggle-sidebar {
+    background:none; border:none; color: var(--text-muted); cursor:pointer;
+    font-size:16px; padding:4px; border-radius:4px; transition:.15s;
+  }
+  .toggle-sidebar:hover { color: var(--text); background: var(--surface3); }
+
+  .search-box {
+    flex:1; background: var(--surface3); border:1px solid var(--border);
+    border-radius:8px; padding: 7px 12px; color: var(--text);
+    font-size:13px; font-family:inherit; outline:none; transition:.2s;
+  }
+  .search-box:focus { border-color: var(--accent); }
+  .search-box::placeholder { color: var(--text-dim); }
+
+  .view-btns { display:flex; gap:4px; }
+  .view-btn {
+    background:none; border:none; color: var(--text-dim); cursor:pointer;
+    padding:6px 8px; border-radius:5px; font-size:14px; transition:.15s;
+  }
+  .view-btn.active, .view-btn:hover { color: var(--accent); background: rgba(88,166,255,.1); }
+
+  .new-note-btn {
+    background: var(--accent); border:none; color: #fff;
+    padding: 7px 16px; border-radius:8px; cursor:pointer;
+    font-size:13px; font-family:inherit; font-weight:500;
+    transition:.15s; white-space:nowrap;
+  }
+  .new-note-btn:hover { background: #79bfff; }
+
+  /* Notes area */
+  .notes-area {
+    flex:1; overflow-y:auto; padding:20px;
+    display:grid; gap:16px;
+  }
+  .notes-area.grid-view { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+  .notes-area.list-view { grid-template-columns: 1fr; max-width:800px; margin:0 auto; width:100%; }
+
+  /* Note card */
+  .note-card {
+    background: var(--surface); border:1px solid var(--border);
+    border-radius:10px; padding:16px; cursor:pointer;
+    transition: all .2s; position:relative; overflow:hidden;
+  }
+  .note-card::before {
+    content:''; position:absolute; top:0; left:0; right:0; height:3px;
+    background: var(--accent); opacity:0; transition:.2s;
+  }
+  .note-card:hover { border-color: rgba(88,166,255,.4); transform: translateY(-1px); box-shadow: 0 4px 20px rgba(0,0,0,.3); }
+  .note-card:hover::before { opacity:1; }
+
+  .note-title {
+    font-size:15px; font-weight:600; margin-bottom:6px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .note-preview {
+    font-size:12px; color: var(--text-muted); line-height:1.6;
+    display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;
+  }
+  .note-meta {
+    display:flex; align-items:center; gap:8px; margin-top:12px;
+    flex-wrap:wrap;
+  }
+  .note-date { font-size:11px; color: var(--text-dim); margin-left:auto; }
+  .note-tags { display:flex; flex-wrap:wrap; gap:4px; flex:1; }
+  .note-tag-badge {
+    font-size:10px; padding:2px 7px; border-radius:8px; font-weight:500;
+  }
+  .note-actions {
+    position:absolute; top:10px; right:10px;
+    display:none; gap:4px;
+  }
+  .note-card:hover .note-actions { display:flex; }
+  .note-action-btn {
+    background: var(--surface2); border:1px solid var(--border);
+    color: var(--text-muted); cursor:pointer; padding:4px 7px;
+    border-radius:5px; font-size:12px; transition:.1s;
+  }
+  .note-action-btn:hover.delete { color: var(--red); border-color: var(--red); background: rgba(248,81,73,.1); }
+  .note-action-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* Todo badge on card */
+  .todo-badge {
+    display:inline-flex; align-items:center; gap:4px;
+    font-size:11px; color: var(--green); background: rgba(63,185,80,.1);
+    padding:2px 8px; border-radius:8px;
+  }
+
+  /* Empty state */
+  .empty {
+    grid-column:1/-1; text-align:center; padding:60px 20px; color: var(--text-dim);
+  }
+  .empty-icon { font-size:48px; margin-bottom:12px; opacity:.4; }
+  .empty p { font-size:14px; margin-top:4px; }
+
+  /* Modal overlay */
+  .overlay {
+    position:fixed; inset:0; background: rgba(0,0,0,.7);
+    backdrop-filter:blur(4px); z-index:100;
+    display:flex; align-items:center; justify-content:center;
+    padding:20px; animation: fadeIn .2s;
+  }
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+  .overlay.hidden { display:none; }
+
+  /* Note editor modal */
+  .editor-modal {
+    background: var(--surface); border:1px solid var(--border);
+    border-radius:14px; width:100%; max-width:720px;
+    max-height:90vh; display:flex; flex-direction:column;
+    animation: slideUp .2s;
+  }
+  @keyframes slideUp { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
+
+  .editor-header {
+    padding:16px 20px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; gap:12px;
+  }
+  .editor-title-input {
+    flex:1; background:none; border:none; color: var(--text);
+    font-size:20px; font-weight:600; font-family:inherit; outline:none;
+  }
+  .editor-title-input::placeholder { color: var(--text-dim); }
+
+  .editor-body { flex:1; overflow-y:auto; padding:16px 20px; }
+
+  .editor-content {
+    width:100%; min-height:180px; background:none; border:none;
+    color: var(--text); font-size:14px; font-family:inherit;
+    line-height:1.8; resize:none; outline:none;
+  }
+  .editor-content::placeholder { color: var(--text-dim); }
+
+  /* Todo in editor */
+  .todo-section { margin-top:16px; border-top:1px solid var(--border); padding-top:16px; }
+  .todo-section-title {
+    font-size:12px; color: var(--text-muted); margin-bottom:10px;
+    display:flex; align-items:center; gap:6px;
+  }
+  .todo-list { display:flex; flex-direction:column; gap:6px; }
+  .todo-item {
+    display:flex; align-items:center; gap:10px;
+    padding:8px 12px; background: var(--surface2); border-radius:8px;
+    border:1px solid var(--border); transition:.15s;
+  }
+  .todo-item.done { opacity:.5; }
+  .todo-item.done .todo-text { text-decoration:line-through; color: var(--text-dim); }
+  .todo-checkbox {
+    width:16px; height:16px; border-radius:4px; border:2px solid var(--border);
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+    transition:.15s; flex-shrink:0; background:none;
+  }
+  .todo-checkbox.checked { background: var(--green); border-color: var(--green); color:#fff; font-size:10px; }
+  .todo-text { flex:1; font-size:13px; background:none; border:none; color:inherit; font-family:inherit; outline:none; }
+  .todo-delete {
+    background:none; border:none; color: var(--text-dim); cursor:pointer;
+    font-size:14px; padding:2px; opacity:0; transition:.1s;
+  }
+  .todo-item:hover .todo-delete { opacity:1; }
+  .todo-delete:hover { color: var(--red); }
+
+  .add-todo-row {
+    display:flex; gap:8px; margin-top:8px;
+  }
+  .add-todo-input {
+    flex:1; background: var(--surface3); border:1px solid var(--border);
+    border-radius:7px; padding:7px 12px; color: var(--text);
+    font-size:13px; font-family:inherit; outline:none;
+  }
+  .add-todo-input:focus { border-color: var(--green); }
+  .add-todo-btn {
+    background: rgba(63,185,80,.15); border:1px solid rgba(63,185,80,.3);
+    color: var(--green); cursor:pointer; padding:7px 12px;
+    border-radius:7px; font-size:13px; transition:.15s;
+  }
+  .add-todo-btn:hover { background: rgba(63,185,80,.25); }
+
+  /* Editor footer */
+  .editor-footer {
+    padding:12px 20px; border-top:1px solid var(--border);
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  }
+  .editor-tag-area { display:flex; flex-wrap:wrap; gap:6px; flex:1; }
+  .editor-footer-actions { display:flex; gap:8px; margin-left:auto; }
+
+  .select-box {
+    background: var(--surface3); border:1px solid var(--border);
+    color: var(--text-muted); border-radius:7px; padding:6px 10px;
+    font-size:12px; font-family:inherit; outline:none; cursor:pointer;
+  }
+  .select-box:focus { border-color: var(--accent); }
+
+  .btn-save {
+    background: var(--accent); border:none; color:#fff;
+    padding:7px 20px; border-radius:8px; cursor:pointer;
+    font-size:13px; font-family:inherit; font-weight:500; transition:.15s;
+  }
+  .btn-save:hover { background:#79bfff; }
+  .btn-cancel {
+    background:none; border:1px solid var(--border); color: var(--text-muted);
+    padding:7px 16px; border-radius:8px; cursor:pointer;
+    font-size:13px; font-family:inherit; transition:.15s;
+  }
+  .btn-cancel:hover { color: var(--text); border-color: var(--text-muted); }
+
+  /* Small modal */
+  .small-modal {
+    background: var(--surface); border:1px solid var(--border);
+    border-radius:12px; padding:24px; width:100%; max-width:360px;
+    animation: slideUp .2s;
+  }
+  .small-modal h3 { font-size:16px; margin-bottom:16px; color: var(--text); }
+  .form-group { margin-bottom:14px; }
+  .form-label { font-size:12px; color: var(--text-muted); margin-bottom:6px; display:block; }
+  .form-input {
+    width:100%; background: var(--surface3); border:1px solid var(--border);
+    border-radius:8px; padding:9px 12px; color: var(--text);
+    font-size:14px; font-family:inherit; outline:none; transition:.2s;
+  }
+  .form-input:focus { border-color: var(--accent); }
+  .color-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:4px; }
+  .color-dot {
+    width:24px; height:24px; border-radius:50%; cursor:pointer;
+    border:2px solid transparent; transition:.15s;
+  }
+  .color-dot.selected { border-color: #fff; transform:scale(1.15); }
+  .modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:4px; }
+
+  /* Toast */
+  .toast {
+    position:fixed; bottom:24px; right:24px; z-index:999;
+    background: var(--surface2); border:1px solid var(--border);
+    border-radius:8px; padding:10px 16px; font-size:13px;
+    animation: toastIn .3s; display:flex; align-items:center; gap:8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.4);
+  }
+  @keyframes toastIn { from{transform:translateY(10px);opacity:0} to{transform:translateY(0);opacity:1} }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width:6px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius:3px; }
+
+  .loading {
+    position:fixed; inset:0; background: var(--bg); z-index:200;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px;
+  }
+  .loading-logo { font-family:'Playfair Display',serif; font-size:32px; color:var(--accent); }
+  .loading-dots { display:flex; gap:6px; }
+  .loading-dot {
+    width:6px; height:6px; border-radius:50%; background:var(--accent);
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  .loading-dot:nth-child(2) { animation-delay:.2s; }
+  .loading-dot:nth-child(3) { animation-delay:.4s; }
+  @keyframes pulse { 0%,80%,100%{opacity:.2} 40%{opacity:1} }
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div class="loading" id="loading">
+  <div class="loading-logo">🌧 Rainy Notes</div>
+  <div class="loading-dots">
+    <div class="loading-dot"></div>
+    <div class="loading-dot"></div>
+    <div class="loading-dot"></div>
+  </div>
+</div>
+
+<!-- Rain background -->
+<div class="rain-bg" id="rainBg"></div>
+
+<div class="app" id="appRoot" style="display:none">
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="logo"><span class="logo-icon">🌧</span> Rainy Notes</div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="nav-item active" onclick="filterView('all')" id="nav-all">
+        <span class="icon">📋</span> โน้ตทั้งหมด <span class="count" id="count-all">0</span>
+      </div>
+      <div class="nav-item" onclick="filterView('todo')" id="nav-todo">
+        <span class="icon">✅</span> To-do Lists <span class="count" id="count-todo">0</span>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="section-label">โฟลเดอร์</div>
+      <div id="folderList"></div>
+      <button class="add-btn" onclick="showFolderModal()">＋ เพิ่มโฟลเดอร์</button>
+    </div>
+
+    <div class="sidebar-section" style="flex:1">
+      <div class="section-label">แท็ก</div>
+      <div class="sidebar-tags" id="tagList"></div>
+      <button class="add-btn" onclick="showTagModal()">＋ เพิ่มแท็ก</button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="toolbar">
+      <button class="toggle-sidebar" onclick="toggleSidebar()" title="Toggle sidebar">☰</button>
+      <input class="search-box" id="searchBox" placeholder="🔍 ค้นหาโน้ต..." oninput="renderNotes()">
+      <div class="view-btns">
+        <button class="view-btn active" onclick="setView('grid',this)" title="Grid">⊞</button>
+        <button class="view-btn" onclick="setView('list',this)" title="List">≡</button>
+      </div>
+      <button class="new-note-btn" onclick="openEditor(null)">＋ โน้ตใหม่</button>
+    </div>
+
+    <div class="notes-area grid-view" id="notesArea"></div>
+  </main>
+</div>
+
+<!-- ======= NOTE EDITOR MODAL ======= -->
+<div class="overlay hidden" id="editorOverlay" onclick="handleOverlayClick(event)">
+  <div class="editor-modal" onclick="e=>e.stopPropagation()">
+    <div class="editor-header">
+      <input class="editor-title-input" id="editorTitle" placeholder="ชื่อโน้ต...">
+      <button class="btn-cancel" onclick="closeEditor()">✕</button>
+    </div>
+    <div class="editor-body">
+      <textarea class="editor-content" id="editorContent" placeholder="เขียนโน้ตที่นี่..." rows="8"></textarea>
+
+      <!-- Todo section -->
+      <div class="todo-section" id="todoSection">
+        <div class="todo-section-title">✅ To-do List</div>
+        <div class="todo-list" id="editorTodoList"></div>
+        <div class="add-todo-row">
+          <input class="add-todo-input" id="newTodoInput" placeholder="เพิ่ม to-do..." onkeydown="handleTodoKey(event)">
+          <button class="add-todo-btn" onclick="addTodoItem()">＋ เพิ่ม</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tags on editor -->
+    <div style="padding:10px 20px; display:flex; flex-wrap:wrap; gap:6px; border-top:1px solid var(--border);" id="editorTagsRow">
+    </div>
+
+    <div class="editor-footer">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <select class="select-box" id="editorFolder">
+          <option value="">📁 ไม่มีโฟลเดอร์</option>
+        </select>
+        <div id="tagSelector" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
+      </div>
+      <div class="editor-footer-actions">
+        <button class="btn-cancel" onclick="closeEditor()">ยกเลิก</button>
+        <button class="btn-save" onclick="saveNote()">💾 บันทึก</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======= FOLDER MODAL ======= -->
+<div class="overlay hidden" id="folderOverlay" onclick="this.classList.add('hidden')">
+  <div class="small-modal" onclick="event.stopPropagation()">
+    <h3>📁 โฟลเดอร์ใหม่</h3>
+    <div class="form-group">
+      <label class="form-label">ชื่อโฟลเดอร์</label>
+      <input class="form-input" id="folderNameInput" placeholder="เช่น งาน, ส่วนตัว...">
+    </div>
+    <div class="form-group">
+      <label class="form-label">สี</label>
+      <div class="color-row" id="folderColorRow"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="document.getElementById('folderOverlay').classList.add('hidden')">ยกเลิก</button>
+      <button class="btn-save" onclick="saveFolder()">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======= TAG MODAL ======= -->
+<div class="overlay hidden" id="tagOverlay" onclick="this.classList.add('hidden')">
+  <div class="small-modal" onclick="event.stopPropagation()">
+    <h3>🏷 แท็กใหม่</h3>
+    <div class="form-group">
+      <label class="form-label">ชื่อแท็ก</label>
+      <input class="form-input" id="tagNameInput" placeholder="เช่น สำคัญ, ไอเดีย...">
+    </div>
+    <div class="form-group">
+      <label class="form-label">สี</label>
+      <div class="color-row" id="tagColorRow"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="document.getElementById('tagOverlay').classList.add('hidden')">ยกเลิก</button>
+      <button class="btn-save" onclick="saveTag()">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getFirestore, collection, doc,
+  addDoc, updateDoc, deleteDoc,
+  onSnapshot, query, orderBy, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ===== Firebase Config =====
+const firebaseConfig = {
+  apiKey: "AIzaSyAXg9JXFe48tcxtFAC-2Adb6c5x01bSbvM",
+  authDomain: "rainy-notes.firebaseapp.com",
+  projectId: "rainy-notes",
+  storageBucket: "rainy-notes.firebasestorage.app",
+  messagingSenderId: "508994533300",
+  appId: "1:508994533300:web:4c625cb86a9401e77fa4e1",
+  measurementId: "G-FRQ3DHLGBZ"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// ===== State =====
+window._db = db;
+window._notes = [];
+window._folders = [];
+window._tags = [];
+window._editingNote = null;
+window._editorTodos = [];
+window._activeFolder = null;
+window._activeTag = null;
+window._filterMode = 'all'; // 'all' | 'todo'
+window._viewMode = 'grid';
+
+const COLORS = ['#58a6ff','#bc8cff','#3fb950','#f78166','#d29922','#79c0ff','#ff7b72','#ffa657'];
+
+// ===== Rain =====
+function createRain() {
+  const bg = document.getElementById('rainBg');
+  for (let i=0; i<30; i++) {
+    const d = document.createElement('div');
+    d.className = 'raindrop';
+    d.style.left = Math.random()*100+'%';
+    d.style.height = (40+Math.random()*60)+'px';
+    d.style.animationDuration = (0.6+Math.random()*0.8)+'s';
+    d.style.animationDelay = -(Math.random()*2)+'s';
+    d.style.opacity = 0.3+Math.random()*0.4;
+    bg.appendChild(d);
+  }
+}
+createRain();
+
+// ===== Color pickers =====
+function buildColorPicker(containerId, selectCallback) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  COLORS.forEach((c,i) => {
+    const d = document.createElement('div');
+    d.className = 'color-dot' + (i===0?' selected':'');
+    d.style.background = c;
+    d.onclick = () => {
+      el.querySelectorAll('.color-dot').forEach(x=>x.classList.remove('selected'));
+      d.classList.add('selected');
+      selectCallback(c);
+    };
+    el.appendChild(d);
+  });
+}
+
+let _folderColor = COLORS[0];
+let _tagColor = COLORS[0];
+
+buildColorPicker('folderColorRow', c => _folderColor = c);
+buildColorPicker('tagColorRow', c => _tagColor = c);
+
+// ===== Firestore listeners =====
+onSnapshot(query(collection(db,'folders'), orderBy('createdAt')), snap => {
+  window._folders = snap.docs.map(d=>({id:d.id,...d.data()}));
+  renderSidebar();
+  renderFolderSelect();
+});
+
+onSnapshot(query(collection(db,'tags'), orderBy('createdAt')), snap => {
+  window._tags = snap.docs.map(d=>({id:d.id,...d.data()}));
+  renderSidebar();
+  renderTagSelector();
+});
+
+onSnapshot(query(collection(db,'notes'), orderBy('updatedAt','desc')), snap => {
+  window._notes = snap.docs.map(d=>({id:d.id,...d.data()}));
+  updateCounts();
+  renderNotes();
+  document.getElementById('loading').style.display='none';
+  document.getElementById('appRoot').style.display='flex';
+});
+
+// ===== Render sidebar =====
+window.renderSidebar = function() {
+  // Folders
+  const fl = document.getElementById('folderList');
+  fl.innerHTML = '';
+  window._folders.forEach(f => {
+    const div = document.createElement('div');
+    div.className = 'folder-item' + (window._activeFolder===f.id?' active':'');
+    div.innerHTML = `
+      <div class="folder-dot" style="background:${f.color||'#58a6ff'}"></div>
+      <span class="folder-name">${f.name}</span>
+      <span class="count">${window._notes.filter(n=>n.folderId===f.id).length}</span>
+      <div class="folder-actions">
+        <button onclick="event.stopPropagation();deleteFolder('${f.id}')" title="ลบ">🗑</button>
+      </div>`;
+    div.onclick = () => {
+      window._activeFolder = window._activeFolder===f.id ? null : f.id;
+      window._activeTag = null;
+      window._filterMode = 'all';
+      setAllNavInactive();
+      renderSidebar(); renderNotes();
+    };
+    fl.appendChild(div);
+  });
+
+  // Tags
+  const tl = document.getElementById('tagList');
+  tl.innerHTML = '';
+  window._tags.forEach(t => {
+    const chip = document.createElement('div');
+    chip.className = 'tag-chip' + (window._activeTag===t.id?' active':'');
+    chip.style.background = (t.color||'#58a6ff')+'22';
+    chip.style.color = t.color||'#58a6ff';
+    chip.innerHTML = `# ${t.name} <span class="tag-x" onclick="event.stopPropagation();deleteTag('${t.id}')">✕</span>`;
+    chip.onclick = () => {
+      window._activeTag = window._activeTag===t.id ? null : t.id;
+      window._activeFolder = null;
+      window._filterMode = 'all';
+      setAllNavInactive();
+      renderSidebar(); renderNotes();
+    };
+    tl.appendChild(chip);
+  });
+}
+
+function setAllNavInactive() {
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+}
+
+window.filterView = function(mode) {
+  window._filterMode = mode;
+  window._activeFolder = null;
+  window._activeTag = null;
+  setAllNavInactive();
+  document.getElementById('nav-'+mode)?.classList.add('active');
+  renderSidebar();
+  renderNotes();
+}
+
+function updateCounts() {
+  document.getElementById('count-all').textContent = window._notes.length;
+  document.getElementById('count-todo').textContent = window._notes.filter(n=>n.todos&&n.todos.length>0).length;
+}
+
+window.renderFolderSelect = function() {
+  const sel = document.getElementById('editorFolder');
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">📁 ไม่มีโฟลเดอร์</option>';
+  window._folders.forEach(f => {
+    const o = document.createElement('option');
+    o.value = f.id; o.textContent = '📁 '+f.name;
+    sel.appendChild(o);
+  });
+  sel.value = prev;
+}
+
+window.renderTagSelector = function() {
+  const c = document.getElementById('tagSelector');
+  c.innerHTML = '';
+  window._tags.forEach(t => {
+    const chip = document.createElement('div');
+    chip.className = 'tag-chip';
+    chip.style.background = (t.color||'#58a6ff')+'22';
+    chip.style.color = t.color||'#58a6ff';
+    chip.textContent = '# '+t.name;
+    chip.dataset.tagId = t.id;
+    chip.onclick = () => {
+      chip.classList.toggle('active');
+      chip.style.borderColor = chip.classList.contains('active') ? (t.color||'#58a6ff') : 'transparent';
+    };
+    c.appendChild(chip);
+  });
+  // re-apply if editing
+  if (window._editingNote && window._editingNote.tagIds) {
+    window._editingNote.tagIds.forEach(tid => {
+      const el = c.querySelector(`[data-tag-id="${tid}"]`);
+      if (el) {
+        el.classList.add('active');
+        const tag = window._tags.find(x=>x.id===tid);
+        if (tag) el.style.borderColor = tag.color||'#58a6ff';
+      }
+    });
+  }
+  // Editor tags display
+  renderEditorTags();
+}
+
+function renderEditorTags() {
+  const row = document.getElementById('editorTagsRow');
+  const sel = getSelectedTagIds();
+  row.innerHTML = '';
+  sel.forEach(tid => {
+    const t = window._tags.find(x=>x.id===tid);
+    if (!t) return;
+    const chip = document.createElement('div');
+    chip.className = 'tag-chip active';
+    chip.style.background = (t.color||'#58a6ff')+'22';
+    chip.style.color = t.color||'#58a6ff';
+    chip.style.borderColor = t.color||'#58a6ff';
+    chip.textContent = '# '+t.name;
+    row.appendChild(chip);
+  });
+}
+
+// ===== Notes render =====
+window.renderNotes = function() {
+  const area = document.getElementById('notesArea');
+  const search = document.getElementById('searchBox').value.toLowerCase();
+  let notes = [...window._notes];
+
+  if (window._filterMode === 'todo') notes = notes.filter(n=>n.todos&&n.todos.length>0);
+  if (window._activeFolder) notes = notes.filter(n=>n.folderId===window._activeFolder);
+  if (window._activeTag) notes = notes.filter(n=>n.tagIds&&n.tagIds.includes(window._activeTag));
+  if (search) notes = notes.filter(n=>(n.title||'').toLowerCase().includes(search)||(n.content||'').toLowerCase().includes(search));
+
+  if (notes.length === 0) {
+    area.innerHTML = `<div class="empty"><div class="empty-icon">🌧</div><div style="font-size:16px;color:var(--text-muted)">ไม่มีโน้ต</div><p>กด "+ โน้ตใหม่" เพื่อเริ่มต้น</p></div>`;
+    return;
+  }
+
+  area.innerHTML = '';
+  notes.forEach(note => {
+    const card = document.createElement('div');
+    card.className = 'note-card';
+    const dateStr = note.updatedAt?.toDate ? formatDate(note.updatedAt.toDate()) : '';
+    const folder = window._folders.find(f=>f.id===note.folderId);
+    const todos = note.todos||[];
+    const doneTodos = todos.filter(t=>t.done).length;
+
+    let tagsHtml = '';
+    if (note.tagIds) {
+      note.tagIds.forEach(tid => {
+        const tag = window._tags.find(t=>t.id===tid);
+        if (tag) tagsHtml += `<span class="note-tag-badge" style="background:${tag.color}22;color:${tag.color}">#${tag.name}</span>`;
+      });
+    }
+
+    let todoBadge = '';
+    if (todos.length > 0) todoBadge = `<span class="todo-badge">✅ ${doneTodos}/${todos.length}</span>`;
+
+    card.innerHTML = `
+      <div class="note-actions">
+        <button class="note-action-btn" onclick="event.stopPropagation();openEditor('${note.id}')">✏️</button>
+        <button class="note-action-btn delete" onclick="event.stopPropagation();deleteNote('${note.id}')">🗑</button>
+      </div>
+      <div class="note-title">${note.title || 'ไม่มีชื่อ'}</div>
+      <div class="note-preview">${note.content ? escapeHtml(note.content) : todos.map(t=>t.text).join(', ') || '<span style="color:var(--text-dim)">ว่างเปล่า</span>'}</div>
+      <div class="note-meta">
+        <div class="note-tags">${tagsHtml}${todoBadge}</div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+          ${folder ? `<span style="font-size:10px;color:${folder.color||'#58a6ff'}">📁 ${folder.name}</span>` : ''}
+          <span class="note-date">${dateStr}</span>
+        </div>
+      </div>`;
+    card.onclick = () => openEditor(note.id);
+    area.appendChild(card);
+  });
+}
+
+function escapeHtml(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function formatDate(d) {
+  const now = new Date();
+  const diff = now - d;
+  if (diff < 60000) return 'เมื่อกี้';
+  if (diff < 3600000) return Math.floor(diff/60000)+' นาทีที่แล้ว';
+  if (diff < 86400000) return Math.floor(diff/3600000)+' ชั่วโมงที่แล้ว';
+  return d.toLocaleDateString('th-TH');
+}
+
+// ===== Editor =====
+window.openEditor = function(noteId) {
+  window._editingNote = noteId ? window._notes.find(n=>n.id===noteId) : null;
+  const note = window._editingNote;
+  document.getElementById('editorTitle').value = note?.title||'';
+  document.getElementById('editorContent').value = note?.content||'';
+  document.getElementById('editorFolder').value = note?.folderId||'';
+
+  // Todos
+  window._editorTodos = note?.todos ? JSON.parse(JSON.stringify(note.todos)) : [];
+  renderEditorTodos();
+
+  // Tags
+  renderTagSelector();
+  if (note?.tagIds) {
+    note.tagIds.forEach(tid => {
+      const el = document.getElementById('tagSelector').querySelector(`[data-tag-id="${tid}"]`);
+      if (el) {
+        el.classList.add('active');
+        const tag = window._tags.find(x=>x.id===tid);
+        if (tag) el.style.borderColor = tag.color||'#58a6ff';
+      }
+    });
+  }
+
+  document.getElementById('editorOverlay').classList.remove('hidden');
+  setTimeout(()=>document.getElementById('editorTitle').focus(), 100);
+}
+
+window.closeEditor = function() {
+  document.getElementById('editorOverlay').classList.add('hidden');
+  window._editingNote = null;
+}
+
+window.handleOverlayClick = function(e) {
+  if (e.target.id === 'editorOverlay') closeEditor();
+}
+
+// Todos in editor
+function renderEditorTodos() {
+  const list = document.getElementById('editorTodoList');
+  list.innerHTML = '';
+  window._editorTodos.forEach((todo, i) => {
+    const item = document.createElement('div');
+    item.className = 'todo-item' + (todo.done?' done':'');
+    item.innerHTML = `
+      <div class="todo-checkbox ${todo.done?'checked':''}" onclick="toggleEditorTodo(${i})">${todo.done?'✓':''}</div>
+      <input class="todo-text" value="${escapeHtml(todo.text)}" onchange="window._editorTodos[${i}].text=this.value" placeholder="รายการ...">
+      <button class="todo-delete" onclick="removeEditorTodo(${i})">✕</button>`;
+    list.appendChild(item);
+  });
+}
+
+window.toggleEditorTodo = function(i) {
+  window._editorTodos[i].done = !window._editorTodos[i].done;
+  renderEditorTodos();
+}
+
+window.removeEditorTodo = function(i) {
+  window._editorTodos.splice(i,1);
+  renderEditorTodos();
+}
+
+window.addTodoItem = function() {
+  const inp = document.getElementById('newTodoInput');
+  const text = inp.value.trim();
+  if (!text) return;
+  window._editorTodos.push({text, done:false});
+  inp.value = '';
+  renderEditorTodos();
+  inp.focus();
+}
+
+window.handleTodoKey = function(e) {
+  if (e.key === 'Enter') addTodoItem();
+}
+
+function getSelectedTagIds() {
+  return [...document.getElementById('tagSelector').querySelectorAll('.tag-chip.active')]
+    .map(el=>el.dataset.tagId).filter(Boolean);
+}
+
+window.saveNote = async function() {
+  const title = document.getElementById('editorTitle').value.trim();
+  const content = document.getElementById('editorContent').value.trim();
+  const folderId = document.getElementById('editorFolder').value;
+  const tagIds = getSelectedTagIds();
+  const todos = window._editorTodos;
+
+  if (!title && !content && todos.length===0) { showToast('⚠️ กรุณาเพิ่มเนื้อหา'); return; }
+
+  const data = { title: title||'ไม่มีชื่อ', content, folderId: folderId||null, tagIds, todos, updatedAt: serverTimestamp() };
+
+  try {
+    if (window._editingNote) {
+      await updateDoc(doc(db,'notes',window._editingNote.id), data);
+      showToast('✅ บันทึกแล้ว');
+    } else {
+      data.createdAt = serverTimestamp();
+      await addDoc(collection(db,'notes'), data);
+      showToast('✅ สร้างโน้ตแล้ว');
+    }
+    closeEditor();
+  } catch(e) { showToast('❌ เกิดข้อผิดพลาด: '+e.message); }
+}
+
+window.deleteNote = async function(id) {
+  if (!confirm('ลบโน้ตนี้?')) return;
+  await deleteDoc(doc(db,'notes',id));
+  showToast('🗑 ลบแล้ว');
+}
+
+// ===== Folders =====
+window.showFolderModal = function() {
+  document.getElementById('folderNameInput').value='';
+  _folderColor = COLORS[0];
+  document.querySelectorAll('#folderColorRow .color-dot').forEach((d,i)=>d.classList.toggle('selected',i===0));
+  document.getElementById('folderOverlay').classList.remove('hidden');
+  setTimeout(()=>document.getElementById('folderNameInput').focus(),100);
+}
+
+window.saveFolder = async function() {
+  const name = document.getElementById('folderNameInput').value.trim();
+  if (!name) { showToast('⚠️ กรุณาใส่ชื่อโฟลเดอร์'); return; }
+  await addDoc(collection(db,'folders'), { name, color:_folderColor, createdAt:serverTimestamp() });
+  document.getElementById('folderOverlay').classList.add('hidden');
+  showToast('📁 สร้างโฟลเดอร์แล้ว');
+}
+
+window.deleteFolder = async function(id) {
+  if (!confirm('ลบโฟลเดอร์นี้? (โน้ตในโฟลเดอร์จะไม่ถูกลบ)')) return;
+  await deleteDoc(doc(db,'folders',id));
+  if (window._activeFolder===id) { window._activeFolder=null; renderNotes(); }
+  showToast('🗑 ลบโฟลเดอร์แล้ว');
+}
+
+// ===== Tags =====
+window.showTagModal = function() {
+  document.getElementById('tagNameInput').value='';
+  _tagColor = COLORS[0];
+  document.querySelectorAll('#tagColorRow .color-dot').forEach((d,i)=>d.classList.toggle('selected',i===0));
+  document.getElementById('tagOverlay').classList.remove('hidden');
+  setTimeout(()=>document.getElementById('tagNameInput').focus(),100);
+}
+
+window.saveTag = async function() {
+  const name = document.getElementById('tagNameInput').value.trim();
+  if (!name) { showToast('⚠️ กรุณาใส่ชื่อแท็ก'); return; }
+  await addDoc(collection(db,'tags'), { name, color:_tagColor, createdAt:serverTimestamp() });
+  document.getElementById('tagOverlay').classList.add('hidden');
+  showToast('🏷 สร้างแท็กแล้ว');
+}
+
+window.deleteTag = async function(id) {
+  if (!confirm('ลบแท็กนี้?')) return;
+  await deleteDoc(doc(db,'tags',id));
+  if (window._activeTag===id) { window._activeTag=null; renderNotes(); }
+  showToast('🗑 ลบแท็กแล้ว');
+}
+
+// ===== UI helpers =====
+window.toggleSidebar = function() {
+  document.getElementById('sidebar').classList.toggle('collapsed');
+}
+
+window.setView = function(mode, btn) {
+  window._viewMode = mode;
+  const area = document.getElementById('notesArea');
+  area.className = 'notes-area ' + (mode==='grid'?'grid-view':'list-view');
+  document.querySelectorAll('.view-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+window.showToast = function(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 2500);
+}
+</script>
+</body>
+</html>
